@@ -142,8 +142,9 @@
     .error-msg {
       color: var(--danger);
       font-size: 0.82rem;
-      margin-top: 10px;
+      margin-top: 12px;
       text-align: center;
+      word-break: break-word;
     }
 
     /* 헤더 */
@@ -587,7 +588,7 @@
 
   <script>
     // ==========================================
-    // Supabase 연결 설정 (사용자 프로젝트 적용 완료)
+    // Supabase 연결 설정
     // ==========================================
     const SUPABASE_URL = 'https://criseqnhzqmzqtkkrjce.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_7f-R4BDcbrFL2hOENFEwPw_zyT_Zp6q';
@@ -604,15 +605,15 @@
         { target: 113, amount: 30000 },
         { target: 112, amount: 40000 },
         { target: 111, amount: 40000 },
-        { target: 110, amount: 70000 }, // 110kg 돌파 보너스
+        { target: 110, amount: 70000 },
         { target: 109, amount: 50000 },
         { target: 108, amount: 60000 },
         { target: 107, amount: 70000 },
         { target: 106, amount: 80000 },
-        { target: 105, amount: 110000 }, // 105kg 돌파 보너스
+        { target: 105, amount: 110000 },
         { target: 104, amount: 100000 },
         { target: 103, amount: 120000 },
-        { target: 102, amount: 200000 }  // 최종 목표 달성 보너스
+        { target: 102, amount: 200000 }
       ],
       equal: [
         { target: 114, amount: 75000 },
@@ -688,7 +689,7 @@
       await fetchAllData();
     }
 
-    // 로그인 처리
+    // 로그인 처리 (실제 에러 원인 출력)
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       authError.textContent = '';
@@ -698,12 +699,16 @@
       loginBtn.disabled = true;
       loginBtn.textContent = '로그인 중...';
 
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      loginBtn.disabled = false;
-      loginBtn.textContent = '로그인';
-
-      if (error) {
-        authError.textContent = '로그인 실패: 이메일 또는 비밀번호를 확인하세요.';
+      try {
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) {
+          authError.textContent = `에러(${error.status || 'Auth'}): ${error.message}`;
+        }
+      } catch (err) {
+        authError.textContent = `연결 오류: ${err.message}`;
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = '로그인';
       }
     });
 
@@ -805,7 +810,6 @@
     // 전체 UI 렌더링
     function renderAll(checkCelebration = true) {
       const currentWeight = logs.length > 0 ? Number(logs[logs.length - 1].weight) : START_WEIGHT;
-      // 역대 최저 체중 기준으로 보상 잠금 해제 유지 (요요가 살짝 와도 이미 달성한 보상은 유지)
       const minWeight = logs.length > 0 ? Math.min(START_WEIGHT, ...logs.map(l => Number(l.weight))) : START_WEIGHT;
 
       const lost = Math.max(0, START_WEIGHT - currentWeight);
@@ -826,13 +830,11 @@
         }
       });
 
-      // 새 구간 돌파 시 폭죽 효과
       if (checkCelebration && lastUnlockedCount !== null && unlockedCount > lastUnlockedCount) {
         confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
       }
       lastUnlockedCount = unlockedCount;
 
-      // 대시보드 업데이트
       document.getElementById('earnedAmount').textContent = earned.toLocaleString() + '원';
       document.getElementById('currentWeightDisplay').textContent = currentWeight.toFixed(1) + ' kg';
       document.getElementById('lostWeightDisplay').textContent = '-' + lost.toFixed(1) + ' kg';
@@ -847,7 +849,6 @@
         document.getElementById('nextGoalText').textContent = '🎉 1차 목표 102kg 완전 정복!';
       }
 
-      // 마일스톤 카드 렌더링
       const grid = document.getElementById('milestoneGrid');
       grid.innerHTML = '';
       let cumulative = 0;
@@ -902,11 +903,9 @@
       const yGoal = getY(GOAL_WEIGHT);
 
       let svgContent = `
-        <!-- 시작선 (115kg) -->
         <line x1="${padL}" y1="${yStart}" x2="${W - padR}" y2="${yStart}" stroke="#374151" stroke-dasharray="4 4" />
         <text x="4" y="${yStart + 4}" fill="#9ca3af" font-size="10">115k</text>
 
-        <!-- 목표선 (102kg) -->
         <line x1="${padL}" y1="${yGoal}" x2="${W - padR}" y2="${yGoal}" stroke="#f59e0b" stroke-dasharray="4 4" opacity="0.7" />
         <text x="4" y="${yGoal + 4}" fill="#f59e0b" font-size="10">102k</text>
       `;
